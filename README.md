@@ -28,3 +28,7 @@ ctest --test-dir build -C Release
 
 Large captures are intentionally not committed. Use the dataset tooling in
 `data/` to fetch approved captures and verify their checksums.
+
+## References
+
+- [GPS Interface Specification IS-GPS-200](https://navcen.uscg.gov/sites/default/files/pdf/gps/IS-GPS-200N.pdf)
