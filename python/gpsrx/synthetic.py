@@ -2,7 +2,9 @@
 
 import math
 import random
+from collections.abc import Sequence
 
+import numpy as np
 
 GPS_G2_TAPS = {
     1: (2, 6),
@@ -42,6 +44,10 @@ GPS_G2_TAPS = {
 
 class GPSPRNGenerator:
     def __init__(self, prn_number: int):
+        if not isinstance(prn_number, int) or isinstance(prn_number, bool):
+            raise TypeError("prn_number must be an integer")
+        if prn_number not in GPS_G2_TAPS:
+            raise ValueError("prn_number must be between 1 and 32")
         g2_tap1, g2_tap2 = GPS_G2_TAPS[prn_number]
         self.g1 = [1] * 10
         self.g2 = [1] * 10
@@ -69,63 +75,104 @@ class GPSPRNGenerator:
 class SyntheticGPSChannel:
     def __init__(
         self,
-        prn_numbers: list[int], # Expected: 1 to 32
-        doppler_shifts: list[float], #Expected: -5000 to 5000
-        code_phases: list[float], # Expected: 0.0 to 1023.0
-        carrier_to_noise_ratios: list[float], # Expected: 0.0 to 50.0
+        prn_numbers: Sequence[int],
+        doppler_shifts: Sequence[float],
+        code_phases: Sequence[float],
+        carrier_to_noise_ratios: Sequence[float],
+        sampling_rate: float = 1.023e6,
+        navigation_data: Sequence[int] | None = None,
+        rng: random.Random | None = None,
     ):
-        self.prn_numbers = prn_numbers
-        self.doppler_shifts = doppler_shifts
-        self.code_phases = code_phases
-        self.carrier_to_noise_ratios = carrier_to_noise_ratios
-        self.sampling_rate = 1.023e6
+        lengths = {
+            len(prn_numbers),
+            len(doppler_shifts),
+            len(code_phases),
+            len(carrier_to_noise_ratios),
+        }
+        if len(lengths) != 1:
+            raise ValueError("all satellite inputs must have equal lengths")
+        if not math.isfinite(sampling_rate) or sampling_rate <= 0.0:
+            raise ValueError("sampling_rate must be finite and positive")
+
+        self.prn_numbers = list(prn_numbers)
+        self.doppler_shifts = list(doppler_shifts)
+        self.code_phases = []
+        self.carrier_to_noise_ratios = list(carrier_to_noise_ratios)
+        for prn, doppler, code_phase, cn0 in zip(
+            self.prn_numbers,
+            self.doppler_shifts,
+            code_phases,
+            self.carrier_to_noise_ratios,
+            strict=True,
+        ):
+            GPSPRNGenerator(prn)
+            if not math.isfinite(doppler) or not -5000.0 <= doppler <= 5000.0:
+                raise ValueError(f"doppler shift for PRN {prn} must be finite and in [-5000, 5000]")
+            if not math.isfinite(code_phase):
+                raise ValueError(f"code phase for PRN {prn} must be finite")
+            if not math.isfinite(cn0) or not 0.0 <= cn0 <= 50.0:
+                raise ValueError(f"C/N0 for PRN {prn} must be finite and in [0, 50]")
+            self.code_phases.append(code_phase % 1023.0)
+
+        self.navigation_data: list[int] | None
+        if navigation_data is not None:
+            if not navigation_data:
+                raise ValueError("navigation_data must not be empty")
+            if any(
+                not isinstance(bit, int) or isinstance(bit, bool) or bit not in (-1, 1)
+                for bit in navigation_data
+            ):
+                raise ValueError("navigation_data bits must be -1 or 1")
+            self.navigation_data = list(navigation_data)
+        else:
+            self.navigation_data = None
+
+        self.sampling_rate = float(sampling_rate)
+        self.rng = rng if rng is not None else random.Random()
+        self.sample_index = 0
+        self.chip_rate = 1.023e6
         
-        # Pre-generate the full 1,023-chip Gold code sequence for each requested satellite
         self.satellite_codes = []
         for prn in prn_numbers:
-            # Assumes GPSPRNGenerator handles G2 tap selection based on the PRN number
             generator = GPSPRNGenerator(prn)
             self.satellite_codes.append(generator.generate_code())
 
     def generate_baseband_samples(self, num_samples: int = 1023) -> list[complex]:
-        iq_samples = []
-        
-        signal_amplitudes = []
-        for cn0 in self.carrier_to_noise_ratios:
-            linear_ratio = 10.0 ** (cn0 / 10.0)
-            amplitude = math.sqrt(linear_ratio / self.sampling_rate)
-            signal_amplitudes.append(amplitude)
+        if not isinstance(num_samples, int) or isinstance(num_samples, bool):
+            raise TypeError("num_samples must be an integer")
+        if num_samples < 0:
+            raise ValueError("num_samples must be non-negative")
 
-        for n in range(num_samples):
-            t = n / self.sampling_rate
-            combined_sample = complex(0.0, 0.0)
-            
-            for i, code in enumerate(self.satellite_codes):
-                effective_chip_index = (n + self.code_phases[i]) % 1023
-                chip_idx = int(effective_chip_index) % 1023
-                
-                chip = code[chip_idx]
-                voltage = 1.0 if chip == 1 else -1.0
-                
-                scaled_voltage = voltage * signal_amplitudes[i]
-                
-                doppler_hz = self.doppler_shifts[i]
-                phase = 2.0 * math.pi * doppler_hz * t
-                carrier_i = math.cos(phase)
-                carrier_q = math.sin(phase)
-                
-                sat_i = scaled_voltage * carrier_i
-                sat_q = scaled_voltage * carrier_q
-                
-                combined_sample += complex(sat_i, sat_q)
-            
-            noise_i = random.gauss(0.0, 1.0)
-            noise_q = random.gauss(0.0, 1.0)
-            noise_sample = complex(noise_i, noise_q) * 0.707
-            
-            iq_samples.append(combined_sample + noise_sample)
-            
-        return iq_samples
+        sample_numbers = self.sample_index + np.arange(num_samples, dtype=np.float64)
+        times = sample_numbers / self.sampling_rate
+        combined_samples = np.zeros(num_samples, dtype=np.complex128)
+        for i, code in enumerate(self.satellite_codes):
+            code_phase = (
+                self.code_phases[i] + sample_numbers * self.chip_rate / self.sampling_rate
+            )
+            chip_indices = np.floor(code_phase).astype(np.int64) % 1023
+            chips = 2.0 * np.asarray(code, dtype=np.float64)[chip_indices] - 1.0
+            if self.navigation_data is not None:
+                bit_indices = np.floor(
+                    sample_numbers * self.chip_rate / self.sampling_rate / (20 * 1023)
+                ).astype(np.int64)
+                nav_bits = np.asarray(self.navigation_data, dtype=np.float64)
+                chips *= nav_bits[bit_indices % len(nav_bits)]
+
+            linear_ratio = 10.0 ** (self.carrier_to_noise_ratios[i] / 10.0)
+            amplitude = math.sqrt(linear_ratio / self.sampling_rate)
+            phase = 2.0 * math.pi * self.doppler_shifts[i] * times
+            combined_samples += amplitude * chips * np.exp(1j * phase)
+
+        noise = np.array(
+            [
+                complex(self.rng.gauss(0.0, 1.0), self.rng.gauss(0.0, 1.0))
+                for _ in range(num_samples)
+            ],
+            dtype=np.complex128,
+        ) * 0.707
+        self.sample_index += num_samples
+        return [complex(value) for value in combined_samples + noise]
 
 if __name__ == "__main__":
     # Example usage
