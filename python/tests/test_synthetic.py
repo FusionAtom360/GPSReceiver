@@ -157,7 +157,7 @@ def test_channel_constructor_mismatched_satellite_inputs_rejected() -> None:
         SyntheticGPSChannel([1, 2], [0.0], [0.0, 0.0], [0.0, 0.0])
 
 
-@pytest.mark.parametrize("bad_navigation_data", [[], [0], [1, -1, 2], [True]])
+@pytest.mark.parametrize("bad_navigation_data", [[], [-1], [0, 1, 2], [True]])
 def test_channel_constructor_invalid_navigation_data_rejected(
     bad_navigation_data: list[int],
 ) -> None:
@@ -168,7 +168,7 @@ def test_channel_constructor_invalid_navigation_data_rejected(
 def test_channel_generate_samples_navigation_bit_changes_after_twenty_code_periods() -> None:
     samples = make_channel(
         cn0=0.0,
-        navigation_data=[1, -1],
+        navigation_data=[1, 0],
         rng=ZeroRNG(),
     ).generate_baseband_samples(20 * 1023 + 1)
     amplitude = math.sqrt(1.0 / 1.023e6)
