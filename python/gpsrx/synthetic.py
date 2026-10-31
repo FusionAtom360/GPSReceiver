@@ -1,5 +1,9 @@
 """Synthetic GPS signal generation for deterministic tests."""
 
+import math
+import random
+
+
 GPS_G2_TAPS = {
     1: (2, 6),
     2: (3, 7),
@@ -65,29 +69,69 @@ class GPSPRNGenerator:
 class SyntheticGPSChannel:
     def __init__(
         self,
-        prn_numbers: list[int],
-        doppler_shifts: list[float],
-        code_phases: list[float],
-        carrier_to_noise_ratios: list[float],
+        prn_numbers: list[int], # Expected: 1 to 32
+        doppler_shifts: list[float], #Expected: -5000 to 5000
+        code_phases: list[float], # Expected: 0.0 to 1023.0
+        carrier_to_noise_ratios: list[float], # Expected: 0.0 to 50.0
     ):
-        self.prn_generators = [GPSPRNGenerator(prn) for prn in prn_numbers]
+        self.prn_numbers = prn_numbers
+        self.doppler_shifts = doppler_shifts
+        self.code_phases = code_phases
+        self.carrier_to_noise_ratios = carrier_to_noise_ratios
+        self.sampling_rate = 1.023e6
+        
+        # Pre-generate the full 1,023-chip Gold code sequence for each requested satellite
+        self.satellite_codes = []
+        for prn in prn_numbers:
+            # Assumes GPSPRNGenerator handles G2 tap selection based on the PRN number
+            generator = GPSPRNGenerator(prn)
+            self.satellite_codes.append(generator.generate_code())
 
-    def generate_baseband_samples(self) -> list[float]:
-        samples = []
-        for _ in range(1023):
-            chip_sum = 0.0
-            for gen in self.prn_generators:
-                chip_sum = gen.clock()
-                voltage = 1.0 if chip_sum == 1 else -1.0
-                chip_sum += voltage
-            samples.append(chip_sum)
-        return samples
+    def generate_baseband_samples(self, num_samples: int = 1023) -> list[complex]:
+        iq_samples = []
+        
+        signal_amplitudes = []
+        for cn0 in self.carrier_to_noise_ratios:
+            linear_ratio = 10.0 ** (cn0 / 10.0)
+            amplitude = math.sqrt(linear_ratio / self.sampling_rate)
+            signal_amplitudes.append(amplitude)
+
+        for n in range(num_samples):
+            t = n / self.sampling_rate
+            combined_sample = complex(0.0, 0.0)
+            
+            for i, code in enumerate(self.satellite_codes):
+                effective_chip_index = (n + self.code_phases[i]) % 1023
+                chip_idx = int(effective_chip_index) % 1023
+                
+                chip = code[chip_idx]
+                voltage = 1.0 if chip == 1 else -1.0
+                
+                scaled_voltage = voltage * signal_amplitudes[i]
+                
+                doppler_hz = self.doppler_shifts[i]
+                phase = 2.0 * math.pi * doppler_hz * t
+                carrier_i = math.cos(phase)
+                carrier_q = math.sin(phase)
+                
+                sat_i = scaled_voltage * carrier_i
+                sat_q = scaled_voltage * carrier_q
+                
+                combined_sample += complex(sat_i, sat_q)
+            
+            noise_i = random.gauss(0.0, 1.0)
+            noise_q = random.gauss(0.0, 1.0)
+            noise_sample = complex(noise_i, noise_q) * 0.707
+            
+            iq_samples.append(combined_sample + noise_sample)
+            
+        return iq_samples
 
 if __name__ == "__main__":
     # Example usage
     prn_numbers = [1, 2, 3]  # PRN numbers for the channels
-    doppler_shifts = [0.0, 0.0, 0.0]  # Doppler shifts for each channel
-    code_phases = [0.0, 0.0, 0.0]  # Code phases for each channel
+    doppler_shifts = [2000.0, -3000.0, 1000]  # Doppler shifts for each channel
+    code_phases = [500.0, 0.0, 20.0]  # Code phases for each channel
     carrier_to_noise_ratios = [30.0, 30.0, 30.0]  # C/N ratios for each channel
 
     synthetic_channel = SyntheticGPSChannel(
