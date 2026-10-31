@@ -1,0 +1,1 @@
+"""FFT-based coarse acquisition."""

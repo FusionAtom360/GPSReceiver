@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpsrx"
+version = "0.1.0"
+description = "Python reference implementation of a GPS L1 C/A software receiver"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.8",
+    "types-PyYAML>=6.0",
+    "pytest>=8.0",
+    "ruff>=0.3",
+]
+
+[tool.setuptools]
+package-dir = {"" = "python"}
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["python", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "python"
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+pythonpath = ["python"]

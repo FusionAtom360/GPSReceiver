@@ -1,0 +1,6 @@
+sample_rate: 2046000
+intermediate_frequency: 0
+sample_format: complex64
+doppler_search_hz: 5000
+doppler_step_hz: 500
+integration_ms: 1
