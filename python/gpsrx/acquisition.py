@@ -3,7 +3,10 @@
 import math
 from collections.abc import Sequence
 from functools import lru_cache
+
 import numpy as np
+from numpy.typing import ArrayLike
+
 from gpsrx.synthetic import GPSPRNGenerator
 
 
@@ -65,7 +68,7 @@ class FFTAcquisition:
 
     def acquire(
         self,
-        signal_block: np.ndarray,
+        signal_block: ArrayLike,
         doppler_bins: Sequence[float],
         sample_offset: int = 0,
     ) -> dict[str, float | int | bool]:
@@ -180,9 +183,8 @@ if __name__ == "__main__":
     doppler_grid = np.arange(-5000.0, 5001.0, 500.0)
 
     # 5. Run acquisition search
-    result = acq.acquire(signal_block, doppler_grid)
+    result = acq.acquire(signal_block, doppler_grid.tolist())
 
-    print("Acquisition Results:")
-    print(f"  Best Doppler Shift : {result['doppler_shift']} Hz")
-    print(f"  Estimated Code Phase: {result['code_phase_chips']:.2f} chips")
-    print(f"  Correlation Peak   : {result['peak_magnitude']:.2f}")
+    print("Acquisition Result:")
+    for key, value in result.items():
+        print(f"{key}: {value}")
