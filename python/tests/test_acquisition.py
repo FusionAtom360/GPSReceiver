@@ -209,7 +209,7 @@ def test_acquire_invalid_signal_shape_or_values_rejected(bad_signal: np.ndarray)
 
 def test_acquire_invalid_signal_type_rejected() -> None:
     with pytest.raises(TypeError):
-        FFTAcquisition(1).acquire(["not", "numeric"], [0.0])  # type: ignore[arg-type]
+        FFTAcquisition(1).acquire(["not", "numeric"], [0.0])
 
 
 @pytest.mark.parametrize("bad_offset", [-1, True, 1.5])
