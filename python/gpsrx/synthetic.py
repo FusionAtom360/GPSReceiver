@@ -207,14 +207,14 @@ if __name__ == "__main__":
         navigation_data=navigation_data,
     )
 
-    # 7. Generate enough samples to transmit the full 8-bit sequence 
+    # 7. Generate enough samples to transmit the full 8-bit sequence
     # (8 bits * 20 ms/bit * 1023 samples/ms = 163,680 samples)
     num_samples = 8 * 20 * 1023
     iq_samples = channel.generate_baseband_samples(num_samples=num_samples)
 
     print(f"Generated {len(iq_samples)} complex baseband IQ samples.")
     print(f"First 5 IQ samples: {iq_samples[:5]}")
-    
+
     with open("synthetic_gps_samples.txt", "w") as f:
         for sample in iq_samples:
             f.write(f"{sample.real:.6f} \t {sample.imag:.6f}j\n")
