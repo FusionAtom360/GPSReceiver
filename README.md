@@ -4,6 +4,9 @@ This repository contains a Python reference implementation for GPS L1 C/A
 signal processing. This includes GPS PRN generation, deterministic synthetic
 IQ signal generation, binary IQ file input, and FFT-based coarse acquisition.
 
+### Note on LLM usage
+This is a self-directed learning project, so I wrote the code myself to make sure I understand every part of it. I used GitHub Copilot as an adversarial reviewer: it critiqued the implementation and the test suite and pointed out gaps. I implemented most of the resulting fixes myself. LLMs also assisted in the editing and formatting of this README. GitHub Copilot wrote the code for parts of `test_synthetic.py` and `test_acquisition.py`, which are marked in [9a4f019](https://github.com/FusionAtom360/GPSReceiver/commit/9a4f0190d3287e65c3ecf9656882cba77a1f6cc4). I have reviewed and can explain all of it.
+
 ## Repository layout
 
 - `python/gpsrx/` - Python package, including:
