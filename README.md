@@ -77,21 +77,14 @@ Run the FFT-acquisition example:
 python python/gpsrx/acquisition.py
 ```
 
-The acquisition example includes both a synthetic setup and a capture-backed
-setup using `data/captures/GPS-L1-2022-03-27.sigmf-data`. Large capture files
+The acquisition example includes both a synthetic setup and a real-capture
+setup using `data/captures/GPS-L1-2022-03-27.sigmf-data` ([available here](https://zenodo.org/records/6394603/files/GPS-L1-2022-03-27.sigmf-data)). Large capture files
 are not committed, so the capture-backed example requires that file to be
 available locally. The IQ source currently expects interleaved signed 16-bit
 little-endian I/Q records and receives the sampling rate from the caller; it
 does not parse SigMF metadata.
 
-## Data and repository policy
-
-Large captures are intentionally not committed. Use the dataset tooling in
-`data/` to fetch approved captures and verify their checksums before using
-them in local experiments. Capture metadata and fetch configuration are still
-being developed; local experiments may also place a compatible USRP capture
-under `data/captures/`.
-
 ## References
 
-- [GPS Interface Specification IS-GPS-200](https://navcen.uscg.gov/sites/default/files/pdf/gps/IS-GPS-200N.pdf)
+- [U.S. Department of Defense: GPS Interface Specification IS-GPS-200](https://navcen.uscg.gov/sites/default/files/pdf/gps/IS-GPS-200N.pdf)
+- [Estévez, Daniel: Recording of GPS L1 signals](https://zenodo.org/records/6394603)
