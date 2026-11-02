@@ -4,10 +4,10 @@ import math
 from collections.abc import Sequence
 from functools import lru_cache
 
-from gpsrx.source import IQSource
 import numpy as np
 from numpy.typing import ArrayLike
 
+from gpsrx.source import IQSource
 from gpsrx.synthetic import GPSPRNGenerator
 
 

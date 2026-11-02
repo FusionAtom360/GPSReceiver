@@ -2,11 +2,14 @@
 
 import math
 import struct
+import types
 
 
 class IQSource:
     def __init__(self, sampling_rate: float, file_path: str):
-        if isinstance(sampling_rate, bool) or not isinstance(sampling_rate, (int, float)):
+        if isinstance(sampling_rate, bool) or not isinstance(
+            sampling_rate, (int, float)
+        ):
             raise TypeError("sampling_rate must be a real number")
         if not math.isfinite(sampling_rate) or sampling_rate <= 0.0:
             raise ValueError("sampling_rate must be finite and positive")
@@ -18,7 +21,12 @@ class IQSource:
     def __enter__(self) -> "IQSource":
         return self
 
-    def __exit__(self, _exc_type, _exc_value, _traceback) -> None:
+    def __exit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc_value: BaseException | None,
+        _traceback: types.TracebackType | None,
+    ) -> None:
         self.close()
 
     def close(self) -> None:
@@ -39,12 +47,6 @@ class IQSource:
             complex(i_sample, q_sample)
             for i_sample, q_sample in struct.iter_unpack("<hh", data)
         ]
-        if any(
-            not math.isfinite(sample.real) or not math.isfinite(sample.imag)
-            for sample in samples
-        ):
-            raise ValueError("IQ data must contain only finite samples")
-
         self.current_sample_index += len(samples)
         return samples
 
