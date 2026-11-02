@@ -30,13 +30,14 @@ class IQSource:
         if num_samples < 0:
             raise ValueError("num_samples must be non-negative")
 
-        data = self._file_handle.read(num_samples * 8)
-        if len(data) % 8:
+        bytes_per_sample = 4
+        data = self._file_handle.read(num_samples * bytes_per_sample)
+        if len(data) % bytes_per_sample != 0:
             raise ValueError("IQ data contains a partial sample record")
 
         samples = [
             complex(i_sample, q_sample)
-            for i_sample, q_sample in struct.iter_unpack("<ff", data)
+            for i_sample, q_sample in struct.iter_unpack("<hh", data)
         ]
         if any(
             not math.isfinite(sample.real) or not math.isfinite(sample.imag)

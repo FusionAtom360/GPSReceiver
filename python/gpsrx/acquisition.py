@@ -4,6 +4,7 @@ import math
 from collections.abc import Sequence
 from functools import lru_cache
 
+from gpsrx.source import IQSource
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -176,8 +177,12 @@ if __name__ == "__main__":
     # 2. Generate 1 millisecond of IQ samples (1023 samples at 1.023 MHz)
     signal_block = channel.generate_baseband_samples(num_samples=1023)
 
+    # 2.5 Alternatively, read a block of IQ samples from a file
+    with IQSource(4000000, "./data/captures/GPS-L1-2022-03-27.sigmf-data") as source:
+        signal_block = source.get_samples(4000)
+
     # 3. Initialize the FFT acquisition engine for PRN 12
-    acq = FFTAcquisition(prn_number=12, sampling_rate=1.023e6)
+    acq = FFTAcquisition(prn_number=12, sampling_rate=4000000)
 
     # 4. Define a Doppler search grid from -5000 Hz to 5000 Hz in 500 Hz steps
     doppler_grid = np.arange(-5000.0, 5001.0, 500.0)
