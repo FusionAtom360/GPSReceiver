@@ -4,6 +4,7 @@ import math
 from collections.abc import Sequence
 from functools import lru_cache
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -158,8 +159,76 @@ class FFTAcquisition:
             ),
         }
 
+
+def plot_correlation_surface(
+    acq: FFTAcquisition, signal_block: ArrayLike, doppler_bins: list[float]
+) -> None:
+    """Computes and plots the 2D correlation surface (Doppler vs. Code Phase)."""
+    signal = np.asarray(signal_block)
+    if signal.ndim != 1:
+        raise ValueError("signal_block must be one-dimensional")
+    if not np.issubdtype(signal.dtype, np.number):
+        raise TypeError("signal_block must contain numeric samples")
+    if not np.isfinite(signal).all():
+        raise ValueError("signal_block must contain only finite samples")
+
+    bins = np.asarray(list(doppler_bins), dtype=np.float64)
+    if bins.ndim != 1 or bins.size == 0:
+        raise ValueError(
+            "doppler_bins must be a non-empty one-dimensional sequence"
+        )
+    if not np.isfinite(bins).all():
+        raise ValueError("doppler_bins must contain only finite values")
+
+    required_samples = acq.samples_per_code * acq.noncoherent_ms
+    if signal.size < required_samples:
+        raise ValueError(
+            f"Signal block length must be at least {required_samples} samples "
+            f"({acq.noncoherent_ms} ms)."
+        )
+
+    signal = np.asarray(
+        signal[:required_samples],
+        dtype=np.complex128,
+    )
+    sample_numbers = np.arange(acq.samples_per_code, dtype=np.float64)
+    segment_scores = np.zeros(
+        (bins.size, acq.samples_per_code), dtype=np.float64
+    )
+
+    for segment in range(acq.noncoherent_ms):
+        start = segment * acq.samples_per_code
+        stop = start + acq.samples_per_code
+        segment_signal = signal[start:stop]
+        segment_time = (sample_numbers + start) / acq.sampling_rate
+        carrier_wipe = np.exp(-1j * 2.0 * np.pi * bins[:, None] * segment_time)
+        correlations = np.fft.ifft(
+            np.fft.fft(segment_signal[None, :] * carrier_wipe, axis=1)
+            * acq.code_fft_conj[None, :],
+            axis=1,
+        )
+        segment_scores += np.abs(correlations) ** 2
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(10, 6))
+    cax = ax.imshow(
+        segment_scores,
+        aspect="auto",
+        extent=(0.0, float(acq.samples_per_code), bins[-1], bins[0]),
+        cmap="viridis",
+    )  # Note: adjust extent based on chip or sample rate
+
+    ax.set_title(f"Acquisition Correlation Surface (PRN {acq.prn_number})")
+    ax.set_xlabel("Code Phase (chips)")
+    ax.set_ylabel("Doppler Bin (Hz)")
+    fig.colorbar(cax, label="Squared Magnitude")
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == "__main__":
     from gpsrx.synthetic import SyntheticGPSChannel
+
     # 1. Setup a synthetic channel containing PRN 12 with a known Doppler shift of +1250 Hz
     prn_numbers = [12]
     doppler_shifts = [1250.0]
@@ -171,7 +240,7 @@ if __name__ == "__main__":
         doppler_shifts=doppler_shifts,
         code_phases=code_phases,
         carrier_to_noise_ratios=cn0,
-        sampling_rate=1.023e6
+        sampling_rate=1.023e6,
     )
 
     # 2. Generate 1 millisecond of IQ samples (1023 samples at 1.023 MHz)
@@ -181,8 +250,13 @@ if __name__ == "__main__":
     with IQSource(4000000, "./data/captures/GPS-L1-2022-03-27.sigmf-data") as source:
         signal_block = source.get_samples(4000)
 
-    # 3. Initialize the FFT acquisition engine for PRN 12
-    acq = FFTAcquisition(prn_number=12, sampling_rate=4000000)
+    acq = FFTAcquisition(
+        prn_number=12,
+        sampling_rate=4000000,
+        detection_threshold=2.5,
+        noncoherent_ms=1,
+        code_phase_exclusion_chips=1.0,
+    )
 
     # 4. Define a Doppler search grid from -5000 Hz to 5000 Hz in 500 Hz steps
     doppler_grid = np.arange(-5000.0, 5001.0, 500.0)
@@ -193,3 +267,6 @@ if __name__ == "__main__":
     print("Acquisition Result:")
     for key, value in result.items():
         print(f"{key}: {value}")
+
+    # 6. Plot the correlation surface
+    plot_correlation_surface(acq, signal_block, doppler_grid.tolist())
