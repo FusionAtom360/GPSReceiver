@@ -7,7 +7,7 @@ import pytest
 from numpy.typing import NDArray
 
 from gpsrx.acquisition import FFTAcquisition, _sampled_code_fft
-from gpsrx.synthetic import GPS_G2_TAPS
+from gpsrx.ca_code import GPS_G2_TAPS
 
 
 def independent_prn_code(prn: int) -> NDArray[np.float64]:

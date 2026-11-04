@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import ArrayLike
 
+from gpsrx.ca_code import GPSPRNGenerator
 from gpsrx.source import IQSource
-from gpsrx.synthetic import GPSPRNGenerator
 
 
 @lru_cache(maxsize=64)
