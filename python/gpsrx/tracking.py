@@ -230,43 +230,37 @@ class GPSChannelTracker:
 
 if __name__ == "__main__":
     from gpsrx.synthetic import SyntheticGPSChannel
-
-    # 1. Setup a synthetic channel containing PRN 12 with a known Doppler shift of +1250 Hz
-    prn_numbers = [12]
-    doppler_shifts = [1250.0]
-    code_phases = [450.2]  # Initial code phase offset in chips
-    cn0 = [42.0]
+    from gpsrx.source import IQSource
 
     channel = SyntheticGPSChannel(
-        prn_numbers=prn_numbers,
-        doppler_shifts=doppler_shifts,
-        code_phases=code_phases,
-        carrier_to_noise_ratios=cn0,
+        prn_numbers=[12],
+        doppler_shifts=[1250.0],
+        code_phases=[592.0],
+        carrier_to_noise_ratios=[50.0],
         sampling_rate=1.023e6,
     )
 
-    # Initialize tracker from acquisition results
-    tracker = GPSChannelTracker(
+    with IQSource(4000000, "./data/captures/GPS-L1-2022-03-27.sigmf-data") as channel:
+        # Initialize tracker from acquisition results
+        tracker = GPSChannelTracker(
         prn_number=12,
         sampling_rate=1.023e6,
-        initial_doppler=1500.0,
-        initial_code_phase=450.0,
-    )
+        initial_doppler=-500.0,
+        initial_code_phase=592.0,
+        )
 
-    # Stream processing loop
-    samples_per_ms = int(round(1.023e6 * 0.001))  # 1023 samples per ms at 1.023 MHz
-    for ms_index in range(1000):  # Process 1 full second (2000 ms)
-        signal_block = channel.generate_baseband_samples(num_samples=samples_per_ms)
-        if len(signal_block) < samples_per_ms:
-            break
+        # Stream processing loop
+        samples_per_ms = int(round(4000000 * 0.001))  # 1023 samples per ms at 1.023 MHz
+        for ms_index in range(15000):  # Process 1 full second (2000 ms)
+            signal_block = channel.get_samples(num_samples=samples_per_ms)
+            if len(signal_block) < samples_per_ms:
+                break
 
-        # Run the per-millisecond tracking engine
-        metrics = tracker.process_millisecond(signal_block)
+            # Run the per-millisecond tracking engine
+            metrics = tracker.process_millisecond(signal_block)
 
-        # Print telemetry every 100 ms
-        if ms_index % 100 == 0:
-            print(f"""MS {ms_index:04d}
-                  Doppler: {metrics['doppler_hz']:.1f} Hz
-                  Code Phase: {metrics['code_phase_chips']:.2f} chips
-                  Bit: {metrics['demodulated_bit']}"""
-            )
+            # Print telemetry every 100 ms
+            if ms_index % 100 == 0:
+                print(
+                    f"MS {ms_index:04d}\tDoppler: {metrics['doppler_hz']:.1f} Hz\tCode Phase: {metrics['code_phase_chips']:.2f} chips\tBit: {metrics['demodulated_bit']}"
+                )
