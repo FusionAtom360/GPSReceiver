@@ -187,7 +187,7 @@ class GPSChannelTracker:
                 cross = i0 * Q_p - I_p * q0
                 dot = i0 * I_p + q0 * Q_p
                 if dot != 0.0:
-                    freq_error_hz = np.arctan(cross / dot) / (2.0 * np.pi * self.dt)
+                    freq_error_hz = np.atan2(cross, dot) / (2.0 * np.pi * self.dt)
                     self.carrier_freq += self.fll_gain * freq_error_hz
             self.prev_prompt = (I_p, Q_p)
             self.prev_phase_error_cycles = carrier_phase_error / (2.0 * np.pi)
@@ -229,24 +229,23 @@ class GPSChannelTracker:
 
 
 if __name__ == "__main__":
-    from gpsrx.synthetic import SyntheticGPSChannel
     from gpsrx.source import IQSource
 
-    channel = SyntheticGPSChannel(
-        prn_numbers=[12],
-        doppler_shifts=[1250.0],
-        code_phases=[592.0],
-        carrier_to_noise_ratios=[50.0],
-        sampling_rate=1.023e6,
-    )
+    # channel = SyntheticGPSChannel(
+    #     prn_numbers=[12],
+    #     doppler_shifts=[1250.0],
+    #     code_phases=[592.0],
+    #     carrier_to_noise_ratios=[50.0],
+    #     sampling_rate=1.023e6,
+    # )
 
     with IQSource(4000000, "./data/captures/GPS-L1-2022-03-27.sigmf-data") as channel:
         # Initialize tracker from acquisition results
         tracker = GPSChannelTracker(
-        prn_number=12,
-        sampling_rate=1.023e6,
-        initial_doppler=-500.0,
-        initial_code_phase=592.0,
+            prn_number=12,
+            sampling_rate=1.023e6,
+            initial_doppler=-500.0,
+            initial_code_phase=592.0,
         )
 
         # Stream processing loop
@@ -262,5 +261,9 @@ if __name__ == "__main__":
             # Print telemetry every 100 ms
             if ms_index % 100 == 0:
                 print(
-                    f"MS {ms_index:04d}\tDoppler: {metrics['doppler_hz']:.1f} Hz\tCode Phase: {metrics['code_phase_chips']:.2f} chips\tBit: {metrics['demodulated_bit']}"
+                    f"MS {ms_index:04d}\t"
+                    f"Doppler: {metrics['doppler_hz']:.1f} Hz\t"
+                    f"Code Phase: "
+                    f"{metrics['code_phase_chips']:.2f} chips\t"
+                    f"Bit: {metrics['demodulated_bit']}"
                 )

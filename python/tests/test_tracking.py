@@ -1,5 +1,6 @@
 import math
 import random
+import warnings
 
 import numpy as np
 import pytest
@@ -213,10 +214,12 @@ def test_tracker_process_millisecond_zero_signal_keeps_state_finite() -> None:
 def test_tracker_process_millisecond_large_finite_signal_rejects_overflow() -> None:
     tracker = GPSChannelTracker(1, 1.023e6, 0.0, 0.0)
 
-    with pytest.raises(ValueError, match="finite"):
-        tracker.process_millisecond(
-            np.full(1023, np.finfo(np.float64).max, dtype=np.complex128)
-        )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        with pytest.raises(ValueError, match="finite"):
+            tracker.process_millisecond(
+                np.full(1023, np.finfo(np.float64).max, dtype=np.complex128)
+            )
 
 
 def test_tracker_process_millisecond_advances_carrier_phase_at_block_boundary() -> None:
