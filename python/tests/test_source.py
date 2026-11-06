@@ -38,7 +38,9 @@ def test_iq_source_get_samples_signed_int16_limits_decode_exactly(
         ]
 
 
-def test_iq_source_get_samples_zero_returns_empty_without_advancing(tmp_path: Path) -> None:
+def test_iq_source_get_samples_zero_returns_empty_without_advancing(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "empty.bin"
     path.write_bytes(b"")
 
@@ -47,7 +49,9 @@ def test_iq_source_get_samples_zero_returns_empty_without_advancing(tmp_path: Pa
         assert source.current_sample_index == 0
 
 
-def test_iq_source_get_samples_eof_returns_available_complete_samples(tmp_path: Path) -> None:
+def test_iq_source_get_samples_eof_returns_available_complete_samples(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "short.bin"
     write_iq_file(path, [(1, 2)])
 
@@ -145,11 +149,12 @@ def test_iq_source_get_samples_after_close_raises(tmp_path: Path) -> None:
         source.get_samples(0)
 
 
-def test_iq_source_get_samples_randomized_chunking_preserves_order(tmp_path: Path) -> None:
+def test_iq_source_get_samples_randomized_chunking_preserves_order(
+    tmp_path: Path,
+) -> None:
     rng = random.Random(20261101)
     expected = [
-        (rng.randint(-32768, 32767), rng.randint(-32768, 32767))
-        for _ in range(128)
+        (rng.randint(-32768, 32767), rng.randint(-32768, 32767)) for _ in range(128)
     ]
     path = tmp_path / "random.bin"
     write_iq_file(path, expected)
@@ -157,9 +162,7 @@ def test_iq_source_get_samples_randomized_chunking_preserves_order(tmp_path: Pat
     # Derive the oracle by independently decoding the signed int16 file format.
     expected_complex = [
         complex(i_sample, q_sample)
-        for i_sample, q_sample in struct.iter_unpack(
-            "<hh", path.read_bytes()
-        )
+        for i_sample, q_sample in struct.iter_unpack("<hh", path.read_bytes())
     ]
     actual: list[complex] = []
     with IQSource(1.0, str(path)) as source:

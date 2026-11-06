@@ -157,6 +157,7 @@ class FFTAcquisition:
             ),
         }
 
+
 if __name__ == "__main__":
     from gpsrx.source import IQSource
     from gpsrx.synthetic import SyntheticGPSChannel

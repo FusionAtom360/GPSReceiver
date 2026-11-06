@@ -107,7 +107,7 @@ def test_channel_manager_init_source_without_get_samples_rejected() -> None:
         sampling_rate = 2_046_000.0
 
     with pytest.raises(TypeError, match="get_samples"):
-        ChannelManager(MissingSamples()) # type: ignore[arg-type]
+        ChannelManager(MissingSamples())  # type: ignore[arg-type]
 
 
 def test_channel_manager_acquire_all_typical_returns_all_prn_results(
@@ -134,8 +134,12 @@ def test_channel_manager_acquire_all_uses_expected_search_grid(
 
     expected_bins = tuple(range(-5000, 5001, 500))
     assert len(FakeAcquisition.instances) == 32
-    assert all(instance.sampling_rate == 1_023_000.0 for instance in FakeAcquisition.instances)
-    assert all(instance.calls[0][1] == expected_bins for instance in FakeAcquisition.instances)
+    assert all(
+        instance.sampling_rate == 1_023_000.0 for instance in FakeAcquisition.instances
+    )
+    assert all(
+        instance.calls[0][1] == expected_bins for instance in FakeAcquisition.instances
+    )
 
 
 def test_channel_manager_acquire_all_passes_code_phase_chips_to_tracker(
@@ -150,7 +154,11 @@ def test_channel_manager_acquire_all_passes_code_phase_chips_to_tracker(
     # Acquisition reports both units; the tracker constructor requires chips.
     assert FakeTracker.instances[0].arguments == (12, 4_000_000.0, 1250.0, 12.25)
     assert manager.channels == [
-        TrackedChannel(prn=12, tracker=manager.channels[0].tracker)
+        TrackedChannel(
+            prn=12,
+            tracker=manager.channels[0].tracker,
+            navigation=manager.channels[0].navigation,
+        )
     ]
 
 

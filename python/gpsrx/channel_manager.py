@@ -5,21 +5,21 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from gpsrx.acquisition import FFTAcquisition
-from gpsrx.source import IQSource
+from gpsrx.navigation import Navigation
 from gpsrx.tracking import GPSChannelTracker
 
 
 class SampleSource(Protocol):
     sampling_rate: float
 
-    def get_samples(self, num_samples: int) -> list[complex]:
-        ...
+    def get_samples(self, num_samples: int) -> list[complex]: ...
 
 
 @dataclass
 class TrackedChannel:
     prn: int
     tracker: GPSChannelTracker
+    navigation: Navigation
 
 
 class ChannelManager:
@@ -57,7 +57,10 @@ class ChannelManager:
                     results["doppler_shift"],
                     results["code_phase_chips"],
                 )
-                self.channels.append(TrackedChannel(prn=prn, tracker=tracker))
+                navigation = Navigation()
+                self.channels.append(
+                    TrackedChannel(prn=prn, tracker=tracker, navigation=navigation)
+                )
         return results_by_prn
 
 
@@ -71,5 +74,11 @@ if __name__ == "__main__":
             signal_block = source.get_samples(int(round(source.sampling_rate * 0.001)))
             for channel in channel_manager.channels:
                 tracking_results = channel.tracker.process_millisecond(signal_block)
-                if ms_index % 1000 == 0:
-                    print(tracking_results)
+                navigation_results = channel.navigation.process_millisecond(
+                    tracking_results["prn"],
+                    tracking_results["prompt_i"],
+                    tracking_results["prompt_power"],
+                    ms_index,
+                )
+                # if ms_index % 1000 == 0:
+                #     print(navigation_results)

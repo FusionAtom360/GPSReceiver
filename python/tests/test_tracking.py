@@ -30,12 +30,10 @@ def make_code_signal(
 ) -> np.ndarray:
     samples_per_code = int(round(sampling_rate * 0.001))
     sample_numbers = np.arange(samples_per_code, dtype=np.float64)
-    chip_positions = (
-        code_phase + sample_numbers * 1.023e6 / sampling_rate
-    ) % 1023.0
-    return sign * independent_bipolar_code(prn)[
-        np.floor(chip_positions).astype(np.int64)
-    ]
+    chip_positions = (code_phase + sample_numbers * 1.023e6 / sampling_rate) % 1023.0
+    return (
+        sign * independent_bipolar_code(prn)[np.floor(chip_positions).astype(np.int64)]
+    )
 
 
 def test_tracker_constructor_typical_initializes_expected_state() -> None:
@@ -93,8 +91,7 @@ def test_tracker_constructor_invalid_doppler_is_rejected(
 ) -> None:
     expected = (
         TypeError
-        if not isinstance(bad_doppler, (int, float))
-        or isinstance(bad_doppler, bool)
+        if not isinstance(bad_doppler, (int, float)) or isinstance(bad_doppler, bool)
         else ValueError
     )
     with pytest.raises(expected):
@@ -131,15 +128,9 @@ def test_tracker_local_codes_match_independent_early_prompt_late_replicas() -> N
     offsets = sample_numbers * 1.023e6 / sampling_rate
     code = independent_bipolar_code(12)
 
-    expected_early = code[
-        np.floor((phase + 0.5 + offsets) % 1023.0).astype(np.int64)
-    ]
-    expected_prompt = code[
-        np.floor((phase + offsets) % 1023.0).astype(np.int64)
-    ]
-    expected_late = code[
-        np.floor((phase - 0.5 + offsets) % 1023.0).astype(np.int64)
-    ]
+    expected_early = code[np.floor((phase + 0.5 + offsets) % 1023.0).astype(np.int64)]
+    expected_prompt = code[np.floor((phase + offsets) % 1023.0).astype(np.int64)]
+    expected_late = code[np.floor((phase - 0.5 + offsets) % 1023.0).astype(np.int64)]
 
     early, prompt, late = tracker._generate_local_codes(phase)
 
@@ -251,9 +242,7 @@ def test_tracker_process_millisecond_navigation_bit_integrates_signs() -> None:
     outputs = []
     for index in range(20):
         sign = 1.0 if index < 11 else -1.0
-        outputs.append(
-            tracker.process_millisecond(sign * positive_signal)["prompt_i"]
-        )
+        outputs.append(tracker.process_millisecond(sign * positive_signal)["prompt_i"])
 
     assert sum(outputs) > 0.0
     assert tracker.last_demodulated_bit == 1

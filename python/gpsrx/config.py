@@ -31,6 +31,8 @@ def load_config(path: Path) -> ReceiverConfig:
         doppler_search_hz=float(
             values.get("doppler_search_hz", ReceiverConfig.doppler_search_hz)
         ),
-        doppler_step_hz=float(values.get("doppler_step_hz", ReceiverConfig.doppler_step_hz)),
+        doppler_step_hz=float(
+            values.get("doppler_step_hz", ReceiverConfig.doppler_step_hz)
+        ),
         integration_ms=int(values.get("integration_ms", ReceiverConfig.integration_ms)),
     )

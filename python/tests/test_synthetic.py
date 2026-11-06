@@ -22,9 +22,7 @@ def independent_prn_code(prn: int) -> list[int]:
         output = g1[9] ^ g2[tap1 - 1] ^ g2[tap2 - 1]
         code.append(output)
         g1 = [g1[2] ^ g1[9]] + g1[:9]
-        g2 = [
-            g2[1] ^ g2[2] ^ g2[5] ^ g2[7] ^ g2[8] ^ g2[9]
-        ] + g2[:9]
+        g2 = [g2[1] ^ g2[2] ^ g2[5] ^ g2[7] ^ g2[8] ^ g2[9]] + g2[:9]
     return code
 
 
@@ -54,7 +52,9 @@ def test_channel_generate_samples_typical_matches_code_and_amplitude() -> None:
     reference_code = independent_prn_code(1)
     amplitude = math.sqrt(1.0 / 1.023e6)
 
-    expected = [complex(amplitude if chip else -amplitude, 0.0) for chip in reference_code[:3]]
+    expected = [
+        complex(amplitude if chip else -amplitude, 0.0) for chip in reference_code[:3]
+    ]
     assert samples == pytest.approx(expected, abs=1e-15)
 
 
@@ -69,7 +69,9 @@ def test_channel_generate_samples_full_code_period_matches_reference() -> None:
     assert samples == pytest.approx(expected, abs=1e-15)
 
 
-def test_channel_generate_samples_boundary_zero_length_returns_empty_without_advancing() -> None:
+def test_channel_generate_samples_boundary_zero_length_returns_empty_without_advancing() -> (
+    None
+):
     channel = make_channel(rng=ZeroRNG())
 
     assert channel.generate_baseband_samples(0) == []
@@ -77,7 +79,9 @@ def test_channel_generate_samples_boundary_zero_length_returns_empty_without_adv
 
 
 def test_channel_generate_samples_boundary_wraps_code_phase() -> None:
-    wrapped = make_channel(code_phase=1023.0, rng=ZeroRNG()).generate_baseband_samples(4)
+    wrapped = make_channel(code_phase=1023.0, rng=ZeroRNG()).generate_baseband_samples(
+        4
+    )
     zero = make_channel(code_phase=0.0, rng=ZeroRNG()).generate_baseband_samples(4)
 
     assert wrapped == zero
@@ -107,7 +111,9 @@ def test_channel_generate_samples_invalid_count_rejected(bad_count: object) -> N
         ("cn0", float("inf")),
     ],
 )
-def test_channel_constructor_invalid_numeric_input_rejected(field: str, value: float) -> None:
+def test_channel_constructor_invalid_numeric_input_rejected(
+    field: str, value: float
+) -> None:
     values = {"doppler": 0.0, "code_phase": 0.0, "cn0": 0.0, "sampling_rate": 1.023e6}
     values[field] = value
     with pytest.raises(ValueError):
@@ -132,7 +138,9 @@ def test_channel_constructor_invalid_navigation_data_rejected(
         make_channel(navigation_data=bad_navigation_data)
 
 
-def test_channel_generate_samples_navigation_bit_changes_after_twenty_code_periods() -> None:
+def test_channel_generate_samples_navigation_bit_changes_after_twenty_code_periods() -> (
+    None
+):
     samples = make_channel(
         cn0=0.0,
         navigation_data=[1, 0],
@@ -142,14 +150,18 @@ def test_channel_generate_samples_navigation_bit_changes_after_twenty_code_perio
     code_first_chip = 1 if independent_prn_code(1)[0] else -1
 
     assert samples[0] == pytest.approx(complex(code_first_chip * amplitude), abs=1e-15)
-    assert samples[20 * 1023] == pytest.approx(complex(-code_first_chip * amplitude), abs=1e-15)
+    assert samples[20 * 1023] == pytest.approx(
+        complex(-code_first_chip * amplitude), abs=1e-15
+    )
 
 
 def test_channel_generate_samples_continuity_matches_one_shot_generation() -> None:
     split = make_channel(doppler=2000.0, code_phase=12.25, rng=random.Random(1234))
     one_shot = make_channel(doppler=2000.0, code_phase=12.25, rng=random.Random(1234))
 
-    split_samples = split.generate_baseband_samples(17) + split.generate_baseband_samples(31)
+    split_samples = split.generate_baseband_samples(
+        17
+    ) + split.generate_baseband_samples(31)
     one_shot_samples = one_shot.generate_baseband_samples(48)
 
     assert split_samples == pytest.approx(one_shot_samples, abs=1e-15)
@@ -162,19 +174,29 @@ def test_channel_generate_samples_seeded_rng_is_reproducible() -> None:
     assert first == second
 
 
-def test_channel_generate_samples_noise_only_empty_satellite_set_returns_finite_samples() -> None:
+def test_channel_generate_samples_noise_only_empty_satellite_set_returns_finite_samples() -> (
+    None
+):
     samples = SyntheticGPSChannel(
         [], [], [], [], rng=random.Random(7)
     ).generate_baseband_samples(32)
 
     assert len(samples) == 32
-    assert all(math.isfinite(sample.real) and math.isfinite(sample.imag) for sample in samples)
+    assert all(
+        math.isfinite(sample.real) and math.isfinite(sample.imag) for sample in samples
+    )
 
 
-def test_channel_phase_property_randomized_fixed_seed_is_periodic_in_code_phase() -> None:
+def test_channel_phase_property_randomized_fixed_seed_is_periodic_in_code_phase() -> (
+    None
+):
     randomizer = random.Random(20261030)
     for _ in range(20):
         phase = randomizer.uniform(-10_000.0, 10_000.0)
-        first = make_channel(code_phase=phase, rng=ZeroRNG()).generate_baseband_samples(8)
-        second = make_channel(code_phase=phase + 1023.0, rng=ZeroRNG()).generate_baseband_samples(8)
+        first = make_channel(code_phase=phase, rng=ZeroRNG()).generate_baseband_samples(
+            8
+        )
+        second = make_channel(
+            code_phase=phase + 1023.0, rng=ZeroRNG()
+        ).generate_baseband_samples(8)
         assert first == second

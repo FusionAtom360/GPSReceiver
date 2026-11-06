@@ -39,9 +39,10 @@ def make_signal(
         dtype=np.float64,
     )
     chips = independent_prn_code(prn)
-    chip_indices = np.floor(
-        (sample_numbers + phase) * 1.023e6 / sampling_rate
-    ).astype(np.int64) % 1023
+    chip_indices = (
+        np.floor((sample_numbers + phase) * 1.023e6 / sampling_rate).astype(np.int64)
+        % 1023
+    )
     code = chips[chip_indices]
     carrier = np.exp(1j * 2.0 * np.pi * doppler * sample_numbers / sampling_rate)
     signal: NDArray[np.complex128] = code * carrier
@@ -59,7 +60,9 @@ def test_sampled_code_fft_typical_matches_independent_fft() -> None:
 
 
 @pytest.mark.parametrize("sampling_rate", [1.023e6, 2.046e6, 4.092e6])
-def test_sampled_code_fft_boundary_has_expected_sample_count(sampling_rate: float) -> None:
+def test_sampled_code_fft_boundary_has_expected_sample_count(
+    sampling_rate: float,
+) -> None:
     expected_count = round(sampling_rate * 0.001)
 
     assert _sampled_code_fft(1, sampling_rate).shape == (expected_count,)
@@ -91,27 +94,39 @@ def test_acquisition_constructor_invalid_prn_rejected(bad_prn: object) -> None:
     "bad_rate",
     [0.0, -1.0, float("nan"), float("inf"), 0.1],
 )
-def test_acquisition_constructor_invalid_sampling_rate_rejected(bad_rate: float) -> None:
+def test_acquisition_constructor_invalid_sampling_rate_rejected(
+    bad_rate: float,
+) -> None:
     with pytest.raises(ValueError):
         FFTAcquisition(1, sampling_rate=bad_rate)
 
 
 @pytest.mark.parametrize("bad_threshold", [0.0, -1.0, float("nan"), float("inf")])
-def test_acquisition_constructor_invalid_threshold_rejected(bad_threshold: float) -> None:
+def test_acquisition_constructor_invalid_threshold_rejected(
+    bad_threshold: float,
+) -> None:
     with pytest.raises(ValueError):
         FFTAcquisition(1, detection_threshold=bad_threshold)
 
 
 @pytest.mark.parametrize("bad_ms", [0, -1, True, 1.5])
-def test_acquisition_constructor_invalid_noncoherent_length_rejected(bad_ms: object) -> None:
-    expected = TypeError if not isinstance(bad_ms, int) or isinstance(bad_ms, bool) else ValueError
+def test_acquisition_constructor_invalid_noncoherent_length_rejected(
+    bad_ms: object,
+) -> None:
+    expected = (
+        TypeError
+        if not isinstance(bad_ms, int) or isinstance(bad_ms, bool)
+        else ValueError
+    )
 
     with pytest.raises(expected):
         FFTAcquisition(1, noncoherent_ms=bad_ms)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("bad_exclusion", [-1.0, float("nan"), float("inf")])
-def test_acquisition_constructor_invalid_exclusion_rejected(bad_exclusion: float) -> None:
+def test_acquisition_constructor_invalid_exclusion_rejected(
+    bad_exclusion: float,
+) -> None:
     with pytest.raises(ValueError):
         FFTAcquisition(1, code_phase_exclusion_chips=bad_exclusion)
 
@@ -195,14 +210,20 @@ def test_acquire_adversarial_wrong_prn_is_not_detected() -> None:
     assert result["detected"] is False
 
 
-@pytest.mark.parametrize("bad_bins", [[], [float("nan")], [float("inf")], [-float("inf")]])
+@pytest.mark.parametrize(
+    "bad_bins", [[], [float("nan")], [float("inf")], [-float("inf")]]
+)
 def test_acquire_invalid_doppler_bins_rejected(bad_bins: Sequence[float]) -> None:
     with pytest.raises(ValueError):
         FFTAcquisition(1).acquire(np.zeros(1023, dtype=np.complex128), bad_bins)
 
 
-@pytest.mark.parametrize("bad_signal", [np.zeros((2, 1023)), np.full(1023, np.nan + 0j)])
-def test_acquire_invalid_signal_shape_or_values_rejected(bad_signal: np.ndarray) -> None:
+@pytest.mark.parametrize(
+    "bad_signal", [np.zeros((2, 1023)), np.full(1023, np.nan + 0j)]
+)
+def test_acquire_invalid_signal_shape_or_values_rejected(
+    bad_signal: np.ndarray,
+) -> None:
     with pytest.raises(ValueError):
         FFTAcquisition(1).acquire(bad_signal, [0.0])
 

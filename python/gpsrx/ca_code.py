@@ -64,5 +64,3 @@ class GPSPRNGenerator:
 
     def generate_code(self) -> list[int]:
         return [self.clock() for _ in range(1023)]
-
-

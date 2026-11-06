@@ -13,9 +13,7 @@ def independent_prn_code(prn: int) -> list[int]:
         output = g1[9] ^ g2[tap1 - 1] ^ g2[tap2 - 1]
         code.append(output)
         g1 = [g1[2] ^ g1[9]] + g1[:9]
-        g2 = [
-            g2[1] ^ g2[2] ^ g2[5] ^ g2[7] ^ g2[8] ^ g2[9]
-        ] + g2[:9]
+        g2 = [g2[1] ^ g2[2] ^ g2[5] ^ g2[7] ^ g2[8] ^ g2[9]] + g2[:9]
     return code
 
 
