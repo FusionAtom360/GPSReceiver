@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from gpsrx.acquisition import FFTAcquisition
+from gpsrx.source import IQSource
 from gpsrx.tracking import GPSChannelTracker
 
 
@@ -22,18 +23,18 @@ class TrackedChannel:
 
 
 class ChannelManager:
-    def __init__(self, source: SampleSource):
-        sampling_rate = source.sampling_rate
+    def __init__(self, signal_source: SampleSource) -> None:
+        sampling_rate = signal_source.sampling_rate
         if isinstance(sampling_rate, bool) or not isinstance(
             sampling_rate, (int, float)
         ):
             raise TypeError("source.sampling_rate must be a real number")
         if not math.isfinite(sampling_rate) or sampling_rate <= 0.0:
             raise ValueError("source.sampling_rate must be finite and positive")
-        if not callable(getattr(source, "get_samples", None)):
+        if not callable(getattr(signal_source, "get_samples", None)):
             raise TypeError("source must provide a callable get_samples method")
         self.channels: list[TrackedChannel] = []
-        self.source = source
+        self.source = signal_source
 
     def acquire_all(self) -> dict[int, dict[str, float | int | bool]]:
         samples_per_ms = int(round(self.source.sampling_rate * 0.001))

@@ -107,7 +107,7 @@ def test_channel_manager_init_source_without_get_samples_rejected() -> None:
         sampling_rate = 2_046_000.0
 
     with pytest.raises(TypeError, match="get_samples"):
-        ChannelManager(MissingSamples())  # type: ignore[arg-type]
+        ChannelManager(MissingSamples()) # type: ignore[arg-type]
 
 
 def test_channel_manager_acquire_all_typical_returns_all_prn_results(
